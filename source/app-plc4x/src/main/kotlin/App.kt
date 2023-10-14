@@ -1,4 +1,5 @@
 import at.rocworks.gateway.core.graphql.GraphQLServer
+//import at.rocworks.gateway.core.mqtt.MqttDriver
 import at.rocworks.gateway.core.mqtt.MqttLogger
 import at.rocworks.gateway.core.mqtt.MqttServer
 import at.rocworks.gateway.core.opcua.KeyStoreLoader
@@ -6,10 +7,8 @@ import at.rocworks.gateway.core.opcua.OpcUaDriver
 import at.rocworks.gateway.core.service.Common
 
 import at.rocworks.gateway.logger.influx.InfluxDBLogger
-//import at.rocworks.gateway.logger.iotdb.IoTDBLogger
 import at.rocworks.gateway.logger.jdbc.JdbcLogger
 import at.rocworks.gateway.logger.kafka.KafkaLogger
-import at.rocworks.gateway.logger.neo4j.Neo4jLogger
 
 import kotlin.Throws
 import kotlin.jvm.JvmStatic
@@ -21,7 +20,6 @@ import java.lang.Exception
 import java.util.logging.Logger
 
 object App {
-
     @Throws(Exception::class)
     @JvmStatic
     fun main(args: Array<String>) {
@@ -60,15 +58,6 @@ object App {
                 GraphQLServer.create(vertx, it, defaultSystem)
             }
 
-        // Plc4x
-        config.getJsonObject("Plc4x")
-            ?.getJsonArray("Drivers")
-            ?.filterIsInstance<JsonObject>()
-            ?.filter { it.getBoolean("Enabled") }
-            ?.forEach {
-                vertx.deployVerticle(Plc4xDriver(it))
-            }
-
         // DB Logger
         config.getJsonObject("Database")
             ?.getJsonArray("Logger")
@@ -76,24 +65,25 @@ object App {
             ?.forEach {
                 createLogger(vertx, it)
             }
+
+        // Mqtt Client
+        /*
+        config.getJsonArray("MqttClient")
+            ?.filterIsInstance<JsonObject>()
+            ?.forEach {
+                vertx.deployVerticle(MqttDriver(it))
+            }
+         */
     }
 
     private fun createLogger(vertx: Vertx, config: JsonObject) {
         val logger = Logger.getLogger(javaClass.simpleName)
         if (config.getBoolean("Enabled", true)) {
             when (val type = config.getString("Type")) {
-                "Mqtt" -> {
-                    vertx.deployVerticle(MqttLogger(config))
-                }
-                "InfluxDB" -> {
-                    vertx.deployVerticle(InfluxDBLogger(config))
-                }
-                //"IoTDB" -> {
-                //    vertx.deployVerticle(IoTDBLogger(config))
-                //}
-                "Kafka" -> {
-                    vertx.deployVerticle(KafkaLogger(config))
-                }
+                "Mqtt" -> vertx.deployVerticle(MqttLogger(config))
+                "Kafka" ->  vertx.deployVerticle(KafkaLogger(config))
+                "Jdbc" -> vertx.deployVerticle(JdbcLogger(config))
+                "InfluxDB" -> vertx.deployVerticle(InfluxDBLogger(config))
                 else -> logger.severe("Unknown database type [${type}]")
             }
         }
