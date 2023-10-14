@@ -1,5 +1,4 @@
 import at.rocworks.gateway.core.graphql.GraphQLServer
-//import at.rocworks.gateway.core.mqtt.MqttDriver
 import at.rocworks.gateway.core.mqtt.MqttLogger
 import at.rocworks.gateway.core.mqtt.MqttServer
 import at.rocworks.gateway.core.opcua.KeyStoreLoader
@@ -66,14 +65,14 @@ object App {
                 createLogger(vertx, it)
             }
 
-        // Mqtt Client
-        /*
-        config.getJsonArray("MqttClient")
+        // Plc4x
+        config.getJsonObject("Plc4x")
+            ?.getJsonArray("Drivers")
             ?.filterIsInstance<JsonObject>()
+            ?.filter { it.getBoolean("Enabled") }
             ?.forEach {
-                vertx.deployVerticle(MqttDriver(it))
+                vertx.deployVerticle(Plc4xDriver(it))
             }
-         */
     }
 
     private fun createLogger(vertx: Vertx, config: JsonObject) {
